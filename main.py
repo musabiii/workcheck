@@ -11,7 +11,7 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Время бездействия в секундах
-INACTIVITY_THRESHOLD = 15 * 60
+INACTIVITY_THRESHOLD = 5 #15 * 60
 
 # Флаг активности
 last_activity_time = time.time()
@@ -73,7 +73,14 @@ try:
             if time.time() - last_activity_time > INACTIVITY_THRESHOLD:
                 print("❗ Слышь, работать! ", INACTIVITY_THRESHOLD, "секунд!")
                 user_active = False
-                send_notification()
+
+                # Получаем текущее время и извлекаем час
+                current_hour = time.localtime().tm_hour
+                if 9 <= current_hour < 18:
+                    print("Сейчас рабочее время (с 9:00 до 18:00)")
+                    send_notification()
+                else:
+                    print("Сейчас нерабочее время")
                 # time.sleep(INACTIVITY_THRESHOLD)  # ждём ещё раз, чтобы не дублировать
 
         activity_event.clear()
