@@ -10,10 +10,8 @@ load_dotenv()
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-print(BOT_TOKEN)
-
 # Время бездействия в секундах
-INACTIVITY_THRESHOLD = 10  # например, 60 секунд
+INACTIVITY_THRESHOLD = 15 * 60
 
 # Флаг активности
 last_activity_time = time.time()
@@ -24,10 +22,12 @@ activity_event = threading.Event()
 
 # Обработчики событий
 def on_activity():
-    global last_activity_time, user_active
+    global last_activity_time, user_active, last_inactivity_time
+    if not user_active:
+        readable_time = time.strftime('%H:%M:%S', time.localtime(last_activity_time))
+        print(f"С возвращением! последняя активность в {readable_time}")
+        last_inactivity_time =  time.time();
     last_activity_time = time.time()
-    # if user_active == False:
-    print("С возвращением!")
     user_active = True
     activity_event.set()  # Пробуждаем главный поток, если ждём активности
 
@@ -46,13 +46,14 @@ def on_press(key):
 
 def send_notification():
     print(BOT_TOKEN)
-    reqUrl = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage?chat_id={CHAT_ID}&text=Пользователь неактивен!"
-    headersList = {
+    msg = "Слышь, работать! прошло 15 минут"
+    req_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage?chat_id={CHAT_ID}&text={msg}"
+    headers_list = {
     "Accept": "*/*",
     "User-Agent": "Thunder Client (https://www.thunderclient.com)" 
     }
     payload = ""
-    response = requests.request("GET", reqUrl, data=payload,  headers=headersList)
+    response = requests.request("GET", req_url, data=payload,  headers=headers_list)
     print(response.text)
 
 # Запуск слушателей в фоне
@@ -65,18 +66,16 @@ keyboard_listener.start()
 print(f"Отслеживание неактивности (порог: {INACTIVITY_THRESHOLD} сек)...")
 try:
     while True:
+        last_inactivity_time =  time.time()
         while user_active:
             time.sleep(1)
-            print(time.time())
+            # print(time.time())
             if time.time() - last_activity_time > INACTIVITY_THRESHOLD:
-                print("❗ Пользователь неактивен более", INACTIVITY_THRESHOLD, "секунд!")
-                # Здесь можно добавить своё действие: выключить ПК, отправить уведомление и т.д.
-                # Например: os.system("shutdown /s /t 1")  # Windows выключение
-                # Или: subprocess.run(["systemctl", "suspend"])  # Linux сон
-                # Чтобы не спамить — можно добавить задержку или сброс флага
+                print("❗ Слышь, работать! ", INACTIVITY_THRESHOLD, "секунд!")
                 user_active = False
                 send_notification()
                 # time.sleep(INACTIVITY_THRESHOLD)  # ждём ещё раз, чтобы не дублировать
+
         activity_event.clear()
         activity_event.wait()
        
