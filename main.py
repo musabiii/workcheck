@@ -1,44 +1,53 @@
+import sys
 import time
 import threading
-from pynput import mouse, keyboard
 import requests
 import os
+import logging
+from pynput import mouse, keyboard
 from dotenv import load_dotenv
 
 load_dotenv()
 
+logging.basicConfig(stream=sys.stdout, datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO,
+                    format="%(asctime)s %(message)s")
+
+
+
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Время бездействия в секундах
-INACTIVITY_THRESHOLD = 15 * 60
-POMODORO = 25 * 60
-SHORT_BREAK_GAP = 5 * 60
+INACTIVITY_THRESHOLD: int = 15 * 60
+POMODORO: int = 25 * 60
+SHORT_BREAK_GAP: int = 5 * 60
 
 # Тестовые данные
-# POMODORO = 10
-# SHORT_BREAK_GAP = 5
+for param in sys.argv:
+    if param == '--debug' or param == '-D':
+        POMODORO = 10
+        SHORT_BREAK_GAP = 5
 
-user_short_break: bool = False
+
 
 # Флаг активности
+user_active = True  # Флаг: активен ли пользователь сейчас
+user_short_break: bool = False
+
 last_activity_time = time.time()
 last_inactivity_time: float = float('+inf')
-
-user_active = True  # Флаг: активен ли пользователь сейчас
 
 # События для синхронизации потоков
 activity_event = threading.Event()
 
-def get_readable_time(ttime, format = "%H:%M:%S"):
-    return time.strftime(format, time.localtime(ttime))
+def get_readable_time(ttime, fmt = "%H:%M:%S"):
+    return time.strftime(fmt, time.localtime(ttime))
 
 # Обработчики событий
 def on_activity():
     global last_activity_time, user_active, last_inactivity_time, user_short_break
     if not user_active or user_short_break:
         # readable_time = time.strftime('%H:%M:%S', time.localtime(last_activity_time))
-        print(f"С возвращением! последняя активность в {get_readable_time(last_activity_time)}")
+        logging.info(f"С возвращением! последняя активность в {get_readable_time(last_activity_time)}")
         last_inactivity_time =  time.time()
     last_activity_time = time.time()
     user_active = True
@@ -47,8 +56,6 @@ def on_activity():
 
 def on_move(x, y):
     on_activity()
-
-
 
 def on_click(x, y, button, pressed):
     if pressed:
@@ -74,7 +81,7 @@ def send_notification(msg, disable_notification = False):
     }
     payload = ""
     response = requests.request("GET", req_url, params = params_list, data=payload,  headers=headers_list)
-    print(response.text)
+    # logging.info(response.text)
 
 # Запуск слушателей в фоне
 mouse_listener = mouse.Listener(on_move=on_move, on_click=on_click, on_scroll=on_scroll)
@@ -83,13 +90,13 @@ keyboard_listener = keyboard.Listener(on_press=on_press)
 mouse_listener.start()
 keyboard_listener.start()
 
-print(f"Отслеживание неактивности (порог: {get_readable_time(INACTIVITY_THRESHOLD, "%H:%M:%S")} сек)...")
+logging.info(f"Отслеживание неактивности (порог: {get_readable_time(INACTIVITY_THRESHOLD, "%H:%M:%S")} сек)...")
 try:
     while True:
         last_inactivity_time =  time.time()
         while user_active:
             time.sleep(1)
-            # print(time.time())
+            # logging.info(time.time())
 
             if 0 < POMODORO < time.time() - last_inactivity_time and not user_short_break:
                 send_notification("Отдохни!")
@@ -98,20 +105,20 @@ try:
             if time.time() - last_activity_time > SHORT_BREAK_GAP and not user_short_break:
                 user_short_break = True
                 send_notification("Конец короткого отдыха!", disable_notification=True)
-                print("short break")
+                logging.info("Короткий отдых")
 
 
             if time.time() - last_activity_time > INACTIVITY_THRESHOLD:
-                print("❗ Слышь, работать! ", INACTIVITY_THRESHOLD, "секунд!")
+                logging.info("❗ Слышь, работать! ", INACTIVITY_THRESHOLD, "секунд!")
                 user_active = False
 
                 # Получаем текущее время и извлекаем час
                 is_work_time = 9 <= time.localtime().tm_hour < 18
                 if is_work_time:
-                    print("Сейчас рабочее время (с 9:00 до 18:00)")
+                    logging.info("15 минут без активности")
                     send_notification("Слышь, работать! прошло 15 минут")
                 else:
-                    print("Сейчас нерабочее время")
+                    logging.info("Сейчас нерабочее время")
                 # time.sleep(INACTIVITY_THRESHOLD)  # ждём ещё раз, чтобы не дублировать
 
         activity_event.clear()
