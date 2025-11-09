@@ -39,15 +39,17 @@ last_inactivity_time: float = float('+inf')
 # События для синхронизации потоков
 activity_event = threading.Event()
 
-def get_readable_time(ttime, fmt = "%H:%M:%S"):
-    return time.strftime(fmt, time.localtime(ttime))
+def get_readable_time(ttime):
+    ttime_ = time.gmtime(ttime)
+    ffmt = f"{"%H ч" if ttime_.tm_hour else ""} {"%M минут" if ttime_.tm_min or (ttime_.tm_min and ttime_.tm_min) else ""} {"%S секунд" if ttime_.tm_sec else ""}"
+    return time.strftime(ffmt, ttime_)
 
 # Обработчики событий
 def on_activity():
     global last_activity_time, user_active, last_inactivity_time, user_short_break
     if not user_active or user_short_break:
-        # readable_time = time.strftime('%H:%M:%S', time.localtime(last_activity_time))
-        logging.info(f"С возвращением! последняя активность в {get_readable_time(last_activity_time)}")
+        readable_time = time.strftime('%H:%M:%S', time.localtime(last_activity_time))
+        logging.info(f"С возвращением! последняя активность в {readable_time}")
         last_inactivity_time =  time.time()
     last_activity_time = time.time()
     user_active = True
@@ -90,7 +92,7 @@ keyboard_listener = keyboard.Listener(on_press=on_press)
 mouse_listener.start()
 keyboard_listener.start()
 
-logging.info(f"Отслеживание неактивности (порог: {get_readable_time(INACTIVITY_THRESHOLD, "%H:%M:%S")} сек)...")
+logging.info(f"Отслеживание неактивности (порог: {get_readable_time(INACTIVITY_THRESHOLD)})")
 try:
     while True:
         last_inactivity_time =  time.time()
