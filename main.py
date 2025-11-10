@@ -13,8 +13,6 @@ load_dotenv()
 logging.basicConfig(stream=sys.stdout, datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO,
                     format="%(asctime)s %(message)s")
 
-
-
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -28,8 +26,6 @@ for param in sys.argv:
         POMODORO = 10
         SHORT_BREAK_GAP = 5
 
-
-
 # Флаг активности
 user_active = True  # Флаг: активен ли пользователь сейчас
 user_short_break: bool = False
@@ -40,11 +36,6 @@ last_inactivity_time: float = float('+inf')
 
 # События для синхронизации потоков
 activity_event = threading.Event()
-
-def get_readable_time(ttime):
-    ttime_ = time.gmtime(ttime)
-    ffmt = f"{"%H ч" if ttime_.tm_hour else ""} {"%M минут" if ttime_.tm_min or (ttime_.tm_min and ttime_.tm_min) else ""} {"%S секунд" if ttime_.tm_sec else ""}"
-    return time.strftime(ffmt, ttime_)
 
 def get_readable_seconds(sec):
     delta = pendulum.from_timestamp(sec) - pendulum.from_timestamp(0)
