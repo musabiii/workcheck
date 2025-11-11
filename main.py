@@ -7,9 +7,9 @@ import logging
 from pynput import mouse, keyboard
 from dotenv import load_dotenv
 import pendulum
+from plyer import notification
 
 load_dotenv()
-
 logging.basicConfig(stream=sys.stdout, datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO,
                     format="%(asctime)s %(message)s")
 
@@ -37,6 +37,19 @@ last_inactivity_time: float = float('+inf')
 # События для синхронизации потоков
 activity_event = threading.Event()
 
+if __name__ == '__main__':
+    print("this is mine")
+
+def main():
+    print("this is mine")
+
+def notify_log(msg):
+   logging.info(msg)
+   notify_win(msg)
+
+def notify_win(title):
+    notification.notify(title=title, message="_", app_name='Work check', timeout=10)
+
 def get_readable_seconds(sec):
     delta = pendulum.from_timestamp(sec) - pendulum.from_timestamp(0)
     return delta.in_words(locale='ru')
@@ -49,9 +62,8 @@ def get_readable_interval(start, end):
 def on_activity():
     global last_activity_time, user_active, last_inactivity_time, user_short_break, pomodoro_notified
     if not user_active or user_short_break:
-        readable_time = time.strftime('%H:%M:%S', time.localtime(last_activity_time))
         readable_interval = get_readable_interval(last_activity_time, time.time())
-        logging.info(f"С возвращением! Вас не было {readable_interval}")
+        notify_log(f"С возвращением! Вас не было {readable_interval}")
         last_inactivity_time =  time.time()
         pomodoro_notified = False
     last_activity_time = time.time()
@@ -103,17 +115,15 @@ try:
             time.sleep(1)
             # logging.info(time.time())
 
-            if 0 < POMODORO < time.time() - last_inactivity_time and not user_short_break and not pomodoro_notified:
+            if (0 < POMODORO < (time.time() - last_inactivity_time)) and not pomodoro_notified:
                 send_notification("Отдохни!")
-                # last_inactivity_time = float('+inf')
+                notify_log("Пора отдохнуть")
                 pomodoro_notified = True
 
             if time.time() - last_activity_time > SHORT_BREAK_GAP and not user_short_break:
-                user_short_break = True
+                user_short_break = pomodoro_notified = True
                 send_notification("Конец короткого отдыха!", disable_notification=True)
-                readable_interval = get_readable_interval(last_inactivity_time, last_activity_time)
-                logging.info(f"Короткий отдых, поработали {readable_interval}")
-
+                notify_log(f"Короткий отдых, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}")
 
             if time.time() - last_activity_time > INACTIVITY_THRESHOLD:
                 logging.info("❗ Слышь, работать! ", INACTIVITY_THRESHOLD, "секунд!")
