@@ -21,12 +21,11 @@ POMODORO: int = 25 * 60
 SHORT_BREAK_GAP: int = 5 * 60
 
 # Тестовые данные
-POMODORO = 10
-SHORT_BREAK_GAP = 5
 for param in sys.argv:
     if param == '--debug' or param == '-D':
         POMODORO = 10
         SHORT_BREAK_GAP = 5
+        INACTIVITY_THRESHOLD: int = 15
 
 # Флаг активности
 user_active = True  # Флаг: активен ли пользователь сейчас
@@ -136,17 +135,14 @@ try:
                 notify_log(f"Короткий отдых, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!", f"всего отработано {get_readable_seconds(worked_time)}")
 
             if time.time() - last_activity_time > INACTIVITY_THRESHOLD:
-                logging.info("❗ Слышь, работать! ", INACTIVITY_THRESHOLD, "секунд!")
                 user_active = False
 
-                # Получаем текущее время и извлекаем час
-                is_work_time = 9 <= time.localtime().tm_hour < 18
+                is_work_time = (9 <= time.localtime().tm_hour < 18)
                 if is_work_time:
                     logging.info("15 минут без активности")
-                    send_notification("Слышь, работать! прошло 15 минут")
+                    send_notification(f"❗ Слышь, работать! Прошло {get_readable_seconds(INACTIVITY_THRESHOLD)}")
                 else:
-                    logging.info("Сейчас нерабочее время")
-                # time.sleep(INACTIVITY_THRESHOLD)  # ждём ещё раз, чтобы не дублировать
+                    logging.info("15 минут без активности, сейчас нерабочее время")
 
         activity_event.clear()
         activity_event.wait()
