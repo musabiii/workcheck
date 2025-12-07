@@ -3,3 +3,4 @@
 .env
 .idea
 sandbox.py
+/py_log.log
