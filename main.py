@@ -7,6 +7,7 @@ import logging
 from pynput import mouse, keyboard
 from dotenv import load_dotenv
 import pendulum
+import random
 from plyer import notification
 
 load_dotenv()
@@ -18,19 +19,30 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 INACTIVITY_THRESHOLD: int = 15 * 60
 POMODORO: int = 25 * 60
+POMODORO_2: int = 40 * 60
 SHORT_BREAK_GAP: int = 5 * 60
+INACTIVITY_SHORT: int = 5 * 60
 
 # Тестовые данные
-for param in sys.argv:
+# for param in sys.argv:
+for i, param in enumerate(sys.argv):
     if param == '--debug' or param == '-D':
         POMODORO = 10
         SHORT_BREAK_GAP = 5
         INACTIVITY_THRESHOLD: int = 15
+    if param == '--long' or param == '-L':
+        POMODORO = 40*60
+        INACTIVITY_THRESHOLD = 25*60
+        SHORT_BREAK_GAP = 10*60
+    if param == '--pomodoro' or param == '-P':
+        POMODORO = 10
+        if i + 1 < len(sys.argv):
+            POMODORO = int(sys.argv[i + 1]) * 60
+            logging.info(f"POMODORO: {POMODORO}")
 
 # Флаг активности
 user_active = True  # Флаг: активен ли пользователь сейчас
-user_short_break: bool = False
-pomodoro_notified = False
+user_short_break = pomodoro_notified = pomodoro_2_notified = False
 
 last_activity_time = time.time()
 last_inactivity_time: float = float('+inf')
@@ -55,7 +67,7 @@ def notify_log(title, msg = "_"):
     
 
 def notify_win(title: str, msg = '_') -> None:
-    notification.notify(title=title, message=msg, app_name='Work check', timeout=10)
+    notification.notify(title=title, message=msg, app_name='Work check', timeout=20)
 
 def get_readable_seconds(sec):
     delta = pendulum.from_timestamp(sec) - pendulum.from_timestamp(0)
@@ -67,13 +79,14 @@ def get_readable_interval(start, end):
 
 # Обработчики событий
 def on_activity():
-    global last_activity_time, user_active, last_inactivity_time, user_short_break, pomodoro_notified, away_time
+    global last_activity_time, user_active, last_inactivity_time, user_short_break, pomodoro_notified, pomodoro_2_notified, away_time
     if not user_active or user_short_break:
         readable_interval = get_readable_interval(last_activity_time, time.time())
         away_time = away_time + (time.time() - last_activity_time)
-        notify_log(f"С возвращением! Вас не было {readable_interval}!", f"всего вне работы {get_readable_seconds(away_time)}")
+        notify_log(f"С возвращением! Вас не было {readable_interval}!", f"всего вне работы {get_readable_seconds(away_time)}"
+                                                                        f"\n{random_quote()}")
         last_inactivity_time =  time.time()
-        pomodoro_notified = False
+        pomodoro_notified = pomodoro_2_notified = False
     last_activity_time = time.time()
     user_active = True
     user_short_break = False
@@ -105,8 +118,71 @@ def send_notification(msg, disable_notification = False):
         "disable_notification": disable_notification,
     }
     payload = ""
-    response = requests.request("GET", req_url, params = params_list, data=payload,  headers=headers_list)
-    # logging.info(response.text)
+    try:
+        response = requests.request("GET", req_url, params = params_list, data=payload,  headers=headers_list)
+    except:
+        logging.error("не удалось отправить тг")
+
+def whitegap(n):
+    result = ""
+    for i in range(n):
+        result += " "
+    return result
+
+def random_quote():
+    quotes = [
+        "Сделай сегодня то, что другие не хотят — завтра будешь жить так, как другие не могут.",
+        "Маленькие шаги каждый день дают большие результаты.",
+        "Дисциплина — это выбор в пользу будущего.",
+        "Лучшее время начать — сейчас.",
+        "Фокус сильнее мотивации.",
+        "Не нужно быть лучшим — нужно быть лучше, чем вчера.",
+        "Сомнение убивает больше мечт, чем неудача.",
+        "Большие задачи решаются маленькими действиями.",
+        "Работай тихо — пусть успех создаёт шум.",
+        "Если не контролируешь день — день контролирует тебя.",
+        "Привычки важнее силы воли.",
+        "Делай трудное первым.",
+        "Прогресс важнее идеала.",
+        "Не скорость, а постоянство ведёт к результату.",
+        "Одна задача за раз — и гора становится холмом.",
+        "Сегодняшний труд — завтрашняя свобода.",
+        "Сосредоточься на процессе, а не на шуме вокруг.",
+        "Результат — это сумма ежедневных усилий.",
+        "Каждый повтор укрепляет характер.",
+        "Отвлечения — враг роста.",
+        "План без действия — просто мечта.",
+        "Лучше сделать хотя бы 1% сегодня, чем ждать идеального момента.",
+        "Успех — это когда дисциплина встречает время.",
+        "Твоя продуктивность — твоя суперсила.",
+        "Небольшой прогресс всё равно прогресс.",
+        "Когда фокус есть — результат неизбежен.",
+        "Работай умно, а не много.",
+        "Сделай себя человеком, который делает.",
+        "Стань тем, кто заканчивает начатое.",
+        "Если задача занимает 5 минут — сделай её сразу.",
+        "Сложное — не значит невозможное.",
+        "Сначала дисциплина, потом вдохновение.",
+        "Ты ближе к цели, чем кажется.",
+        "Перфекционизм — форма прокрастинации.",
+        "Не думай о всём — думай о следующем шаге.",
+        "Твой будущий ты благодарит тебя за сегодняшний выбор.",
+        "Контроль над временем — контроль над жизнью.",
+        "Просто начни — остальное подтянется.",
+        "Делай. Отдыхай. Делай снова.",
+        "Терпение + действие = результат.",
+        "Один сфокусированный час ценнее десяти рассеянных.",
+        "Учись отдыхать, а не сдаваться.",
+        "Настоящий рост начинается в неудобстве.",
+        "Тебе не нужно быть идеальным — тебе нужно быть последовательным.",
+        "Ставь цель — и двигайся к ней каждый день.",
+        "Маленькие победы ведут к большим.",
+        "Если хочешь изменить жизнь — начни с дня.",
+        "Ты делаешь больше, чем тебе кажется.",
+        "Каждое усилие имеет значение.",
+        "Твой потенциал раскрывается в действии."
+    ]
+    return random.choice(quotes)
 
 # Запуск слушателей в фоне
 mouse_listener = mouse.Listener(on_move=on_move, on_click=on_click, on_scroll=on_scroll)
@@ -115,7 +191,12 @@ keyboard_listener = keyboard.Listener(on_press=on_press)
 mouse_listener.start()
 keyboard_listener.start()
 
-logging.info(f"Отслеживание неактивности (порог: {get_readable_seconds(INACTIVITY_THRESHOLD)})")
+logging.info(f"Отслеживание неактивности "
+            f"(порог: {get_readable_seconds(INACTIVITY_THRESHOLD)})"
+            f" Перерыв {get_readable_seconds(SHORT_BREAK_GAP)}"
+            f" \n{whitegap(20)}POMODORO {get_readable_seconds(POMODORO)} POMODORO_2 {get_readable_seconds(POMODORO_2)}"
+            f"\n\n{whitegap(20)}{random_quote()}")
+
 try:
     while True:
         last_inactivity_time =  time.time()
@@ -127,7 +208,14 @@ try:
                 send_notification("Отдохни!")
                 notify_log("Пора отдохнуть")
                 pomodoro_notified = True
+            if (0 < POMODORO_2 < (time.time() - last_inactivity_time)) and not pomodoro_2_notified:
+                send_notification("Отдохни!")
+                notify_log("Пора отдохнуть")
+                pomodoro_2_notified = True
 
+            # if time.time() - last_activity_time > INACTIVITY_SHORT and not user_short_break:
+            #     # d
+            #
             if time.time() - last_activity_time > SHORT_BREAK_GAP and not user_short_break:
                 user_short_break = pomodoro_notified = True
                 send_notification("Конец короткого отдыха!", disable_notification=True)
