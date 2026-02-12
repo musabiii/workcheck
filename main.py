@@ -10,6 +10,7 @@ import pendulum
 import random
 from plyer import notification
 from rich.logging import RichHandler
+from rich.console import Console
 
 load_dotenv()
 
@@ -25,6 +26,9 @@ logging.basicConfig(
     format="%(message)s",
     handlers=[rich_handler],
 )
+
+# Отдельная консоль Rich для динамического вывода таймера
+console = Console()
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -61,6 +65,11 @@ last_inactivity_time: float = float('+inf')
 worked_time = 0
 away_time = 0
 
+# Текущая активная сессия (для отображения в консоли)
+active_session_start = time.time()
+active_session_minutes_logged = 0
+active_session_line_length = 0
+
 # События для синхронизации потоков
 activity_event = threading.Event()
 
@@ -91,14 +100,23 @@ def get_readable_interval(start, end):
 
 # Обработчики событий
 def on_activity():
-    global last_activity_time, user_active, last_inactivity_time, user_short_break, pomodoro_notified, pomodoro_2_notified, away_time
+    global last_activity_time, user_active, last_inactivity_time, user_short_break
+    global pomodoro_notified, pomodoro_2_notified, away_time
+    global active_session_start, active_session_minutes_logged, active_session_line_length
     if not user_active or user_short_break:
         readable_interval = get_readable_interval(last_activity_time, time.time())
         away_time = away_time + (time.time() - last_activity_time)
-        notify_log(f"[green]С возвращением! Вас не было {readable_interval}!", f"всего вне работы {get_readable_seconds(away_time)}"
-                                                                        f"\n{random_quote()}[/green]")
-        last_inactivity_time =  time.time()
+        notify_log(
+            f"[green]С возвращением! Вас не было {readable_interval}!",
+            f"всего вне работы {get_readable_seconds(away_time)}\n{random_quote()}[/green]"
+        )
+        last_inactivity_time = time.time()
         pomodoro_notified = pomodoro_2_notified = False
+
+        # Новый активный интервал — сбрасываем счётчик для отображения и запоминаем старт
+        active_session_start = time.time()
+        active_session_minutes_logged = 0
+        active_session_line_length = 0
     last_activity_time = time.time()
     user_active = True
     user_short_break = False
@@ -214,7 +232,17 @@ try:
         last_inactivity_time =  time.time()
         while user_active:
             time.sleep(1)
-            # logging.info(time.time())
+
+            # Обновляем отображение длительности текущей активной сессии в минутах
+            elapsed = time.time() - active_session_start
+            minutes = int(elapsed // 60)
+            if minutes > active_session_minutes_logged:
+                active_session_minutes_logged = minutes
+                # Обновляем одну и ту же строку в консоли (без добавления новых строк)
+                line = f"[cyan]Текущая активная сессия: {minutes} мин[/cyan]"
+                padding = max(active_session_line_length - len(line), 0)
+                console.print(line + " " * padding, end="\r")
+                active_session_line_length = len(line)
 
             if (0 < POMODORO < (time.time() - last_inactivity_time)) and not pomodoro_notified:
                 # send_notification("Отдохни!")
@@ -230,6 +258,11 @@ try:
             #
             if time.time() - last_activity_time > SHORT_BREAK_GAP and not user_short_break:
                 user_short_break = pomodoro_notified = True
+
+                # Сбрасываем отображение таймера активной сессии — начнётся новый после возвращения
+                active_session_minutes_logged = 0
+                active_session_line_length = 0
+
                 send_notification("Конец короткого отдыха!", disable_notification=True)
                 worked_time = worked_time + (last_activity_time - last_inactivity_time)
                 notify_log(f"[blue]Короткий отдых, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!", f"всего отработано {get_readable_seconds(worked_time)}[/blue]")
