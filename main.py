@@ -95,8 +95,8 @@ def on_activity():
     if not user_active or user_short_break:
         readable_interval = get_readable_interval(last_activity_time, time.time())
         away_time = away_time + (time.time() - last_activity_time)
-        notify_log(f"С возвращением! Вас не было {readable_interval}!", f"всего вне работы {get_readable_seconds(away_time)}"
-                                                                        f"\n{random_quote()}")
+        notify_log(f"[green]С возвращением! Вас не было {readable_interval}!", f"всего вне работы {get_readable_seconds(away_time)}"
+                                                                        f"\n{random_quote()}[/green]")
         last_inactivity_time =  time.time()
         pomodoro_notified = pomodoro_2_notified = False
     last_activity_time = time.time()
@@ -218,11 +218,11 @@ try:
 
             if (0 < POMODORO < (time.time() - last_inactivity_time)) and not pomodoro_notified:
                 # send_notification("Отдохни!")
-                notify_log(f"Пора отдохнуть, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!")
+                notify_log(f"[yellow]Пора отдохнуть, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}![/yellow]")
                 pomodoro_notified = True
             if (0 < POMODORO_2 < (time.time() - last_inactivity_time)) and not pomodoro_2_notified:
                 send_notification("Отдохни!")
-                notify_log(f"Пора отдохнуть, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!")
+                notify_log(f"[red]Пора отдохнуть, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}![/red]")
                 pomodoro_2_notified = True
 
             # if time.time() - last_activity_time > INACTIVITY_SHORT and not user_short_break:
@@ -232,7 +232,7 @@ try:
                 user_short_break = pomodoro_notified = True
                 send_notification("Конец короткого отдыха!", disable_notification=True)
                 worked_time = worked_time + (last_activity_time - last_inactivity_time)
-                notify_log(f"Короткий отдых, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!", f"всего отработано {get_readable_seconds(worked_time)}")
+                notify_log(f"[blue]Короткий отдых, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!", f"всего отработано {get_readable_seconds(worked_time)}[/blue]")
 
             if time.time() - last_activity_time > INACTIVITY_THRESHOLD:
                 user_active = False
@@ -250,7 +250,15 @@ try:
        
 
 except KeyboardInterrupt:
-    print("\nЗавершение...")
+    now = time.time()
+
+    total_worked_time = worked_time
+    total_away_time = away_time
+
+    logging.info(
+        f"Завершение. Всего отработано: {get_readable_seconds(total_worked_time)}; "
+        f"вне работы: {get_readable_seconds(total_away_time)}"
+    )
 finally:
     mouse_listener.stop()
     keyboard_listener.stop()
