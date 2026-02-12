@@ -9,10 +9,22 @@ from dotenv import load_dotenv
 import pendulum
 import random
 from plyer import notification
+from rich.logging import RichHandler
 
 load_dotenv()
-logging.basicConfig(stream=sys.stdout, datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO,
-                    format="%(asctime)s %(message)s")
+
+# Цветное логирование через Rich
+rich_handler = RichHandler(
+    rich_tracebacks=True,
+    markup=True,
+    log_time_format="%Y-%m-%d %H:%M:%S",
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+    handlers=[rich_handler],
+)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -205,12 +217,12 @@ try:
             # logging.info(time.time())
 
             if (0 < POMODORO < (time.time() - last_inactivity_time)) and not pomodoro_notified:
-                send_notification("Отдохни!")
-                notify_log("Пора отдохнуть")
+                # send_notification("Отдохни!")
+                notify_log(f"Пора отдохнуть, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!")
                 pomodoro_notified = True
             if (0 < POMODORO_2 < (time.time() - last_inactivity_time)) and not pomodoro_2_notified:
                 send_notification("Отдохни!")
-                notify_log("Пора отдохнуть")
+                notify_log(f"Пора отдохнуть, поработали {get_readable_interval(last_inactivity_time, last_activity_time)}!")
                 pomodoro_2_notified = True
 
             # if time.time() - last_activity_time > INACTIVITY_SHORT and not user_short_break:
@@ -228,7 +240,8 @@ try:
                 is_work_time = (9 <= time.localtime().tm_hour < 18)
                 if is_work_time:
                     logging.info("15 минут без активности")
-                    send_notification(f"❗ Слышь, работать! Прошло {get_readable_seconds(INACTIVITY_THRESHOLD)}")
+                    send_notification(f"❗ Слышь, работать! Прошло {get_readable_seconds(INACTIVITY_THRESHOLD)} "
+                                      f"\n{random_quote()}")
                 else:
                     logging.info("15 минут без активности, сейчас нерабочее время")
 
