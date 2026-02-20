@@ -236,10 +236,19 @@ try:
             # Обновляем отображение длительности текущей активной сессии в минутах
             elapsed = time.time() - active_session_start
             minutes = int(elapsed // 60)
-            if minutes > active_session_minutes_logged:
-                active_session_minutes_logged = minutes
+            if minutes > active_session_minutes_logged or (minutes == 0 and active_session_minutes_logged == 0):
+                if minutes == 0 and active_session_minutes_logged == 0:
+                    active_session_minutes_logged = -1  # показываем 0 один раз, дальше ждём 1 мин
+                else:
+                    active_session_minutes_logged = minutes
                 # Обновляем одну и ту же строку в консоли (без добавления новых строк)
-                line = f"[cyan]Текущая активная сессия: {minutes} мин[/cyan]"
+                total_worked = worked_time + elapsed
+                worked_min = int(total_worked // 60)
+                away_min = int(away_time // 60)
+                line = (
+                    f"[cyan]Текущая активная сессия: {minutes} мин | "
+                    f"отработано: {worked_min} мин | вне работы: {away_min} мин[/cyan]"
+                )
                 padding = max(active_session_line_length - len(line), 0)
                 console.print(line + " " * padding, end="\r")
                 active_session_line_length = len(line)
