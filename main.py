@@ -98,6 +98,18 @@ def get_readable_interval(start, end):
     delta = pendulum.from_timestamp(end) - pendulum.from_timestamp(start)
     return delta.in_words(locale='ru')
 
+def format_minutes(total_minutes: int) -> str:
+    """
+    Форматирует количество минут:
+    - до 60: только минуты
+    - от 60 и больше: часы и минуты
+    """
+    if total_minutes < 60:
+        return f"{total_minutes} мин"
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    return f"{hours} ч {minutes} мин"
+
 # Обработчики событий
 def on_activity():
     global last_activity_time, user_active, last_inactivity_time, user_short_break
@@ -246,8 +258,8 @@ try:
                 worked_min = int(total_worked // 60)
                 away_min = int(away_time // 60)
                 line = (
-                    f"[cyan]Текущая активная сессия: {minutes} мин | "
-                    f"отработано: {worked_min} мин | вне работы: {away_min} мин[/cyan]"
+                    f"[cyan]Текущая активная сессия: {format_minutes(minutes)} | "
+                    f"отработано: {format_minutes(worked_min)} | вне работы: {format_minutes(away_min)}[/cyan]"
                 )
                 padding = max(active_session_line_length - len(line), 0)
                 console.print(line + " " * padding, end="\r")
